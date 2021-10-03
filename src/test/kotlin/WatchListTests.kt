@@ -34,9 +34,19 @@ class WatchListTests {
         testDispatcher.cleanupTestCoroutines()
     }
 
+    @Test
+    fun testZeroSubscriptions() = runTest {
+        val ftseFlow: Flow<Stock> = listOf(Stock("LLY", 0.02)).asFlow()
+        val marketService = MarketService(ftseFlow, emptyFlow(), emptyFlow())
+        val watchList = WatchList(emptyList(), marketService)
+        watchList.subscriptions.test {
+            awaitComplete()
+        }
+    }
+
     // Test subscribing to a single stock
     @Test
-    fun testSingleStockSubscription() = runTest {
+    fun testSingleSubscription() = runTest {
         val ftseFlow: Flow<Stock> = listOf(
             Stock("LLY", 0.02), Stock("LLY", 2.50), Stock("RR", 3.50), Stock("LLY", 10.22)
         ).asFlow()
@@ -62,7 +72,7 @@ class WatchListTests {
 
     // Subscribe to multiple stocks, only be informed of a change of the relevant stock.
     @Test
-    fun testMultipleStockSubscriptions() = runTest {
+    fun testMultipleSubscriptions() = runTest {
         val ftseFlow: Flow<Stock> = listOf(
             Stock("ADM", 0.02), Stock("LLY", 2.50), Stock("RR", 3.50), Stock("LLY", 10.22), Stock("ITV", 22.22)
         ).asFlow()
@@ -88,7 +98,7 @@ class WatchListTests {
 
     // Try subscribing to a ftse and a nasdaq markets and mix the streams.
     @Test
-    fun testMultipleExchanges() = runTest {
+    fun testMultipleExchangesWithMultipleSubscriptions() = runTest {
         val ftseFlow: Flow<Stock> = listOf(
             Stock("ADM", 0.02), Stock("LLY", 2.50), Stock("RR", 3.50), Stock("LLY", 10.22), Stock("ITV", 22.22)
         ).asFlow().onEach { delay(200) }
