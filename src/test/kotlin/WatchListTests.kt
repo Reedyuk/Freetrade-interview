@@ -95,7 +95,10 @@ class WatchListTests {
         val nasdaqFlow: Flow<Stock> = listOf(
             Stock("TSLA", 0.02), Stock("MSFT", 2.50), Stock("TSLA", 3.50), Stock("AAPL", 10.22), Stock("TSLA", 22.22)
         ).asFlow().onEach { delay(200) }
-        val marketService = MarketService(ftseFlow, nasdaqFlow, emptyFlow())
+        val cryptoFlow: Flow<Stock> = listOf(
+            Stock("BTC", 1000.00), Stock("ETH", 1300.50), Stock("BTC", 24000.23), Stock("BTC", 20000.67), Stock("DOT", 4.22)
+        ).asFlow().onEach { delay(200) }
+        val marketService = MarketService(ftseFlow, nasdaqFlow, cryptoFlow)
         val watchList = WatchList(listOf("LLY", "TSLA"), marketService)
 
         watchList.subscriptions.test {
