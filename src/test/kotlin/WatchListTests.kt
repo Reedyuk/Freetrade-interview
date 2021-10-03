@@ -1,14 +1,10 @@
 import Models.Stock
 import Services.MarketService
 import app.cash.turbine.test
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.asFlow
-import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.test.TestCoroutineDispatcher
 import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runBlockingTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Before
@@ -17,8 +13,10 @@ import kotlin.test.assertEquals
 import kotlin.time.ExperimentalTime
 
 @ExperimentalCoroutinesApi
-fun runTest(test: suspend () -> Unit) = runBlockingTest { test() }
+// Can't use runBlockingTest due to use of delay in flow.
+fun runTest(test: suspend () -> Unit) = runBlocking { test() }
 
+@FlowPreview
 @ExperimentalCoroutinesApi
 @ExperimentalTime
 class WatchListTests {
@@ -88,34 +86,34 @@ class WatchListTests {
         }
     }
 
-    // Try subscribing to a ftse and a nasdaq item
+    // Try subscribing to a ftse and a nasdaq markets and mix the streams.
     @Test
     fun testMultipleExchanges() = runTest {
         val ftseFlow: Flow<Stock> = listOf(
             Stock("ADM", 0.02), Stock("LLY", 2.50), Stock("RR", 3.50), Stock("LLY", 10.22), Stock("ITV", 22.22)
-        ).asFlow()
+        ).asFlow().onEach { delay(200) }
         val nasdaqFlow: Flow<Stock> = listOf(
             Stock("TSLA", 0.02), Stock("MSFT", 2.50), Stock("TSLA", 3.50), Stock("AAPL", 10.22), Stock("TSLA", 22.22)
-        ).asFlow()
+        ).asFlow().onEach { delay(200) }
         val marketService = MarketService(ftseFlow, nasdaqFlow, emptyFlow())
         val watchList = WatchList(listOf("LLY", "TSLA"), marketService)
 
         watchList.subscriptions.test {
             val onePrice = awaitItem()
-            assertEquals(2.50, onePrice.price)
-            assertEquals("LLY", onePrice.id)
+            assertEquals("TSLA", onePrice.id)
+            assertEquals(0.02, onePrice.price)
 
             val secondPrice = awaitItem()
-            assertEquals(10.22, secondPrice.price)
+            assertEquals(2.50, secondPrice.price)
             assertEquals("LLY", secondPrice.id)
 
             val thirdPrice = awaitItem()
-            assertEquals(0.02, thirdPrice.price)
+            assertEquals(3.50, thirdPrice.price)
             assertEquals("TSLA", thirdPrice.id)
 
             val fourthPrice = awaitItem()
-            assertEquals(3.50, fourthPrice.price)
-            assertEquals("TSLA", fourthPrice.id)
+            assertEquals(10.22, fourthPrice.price)
+            assertEquals("LLY", fourthPrice.id)
 
             val fifthPrice = awaitItem()
             assertEquals(22.22, fifthPrice.price)
